@@ -1,0 +1,31 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "osu-weather-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-04-13",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "d1_databases": [
+    {
+      "binding": "WEATHER_DB",
+      "database_name": "osu-weather-db",
+      "database_id": "d4dd3b8f-caf7-4359-ab3a-6b61d13aed27",
+      "preview_database_id": "d4dd3b8f-caf7-4359-ab3a-6b61d13aed27",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "vars": {
+    "HISTORY_CAPTURE_INTERVAL_SECONDS": "600"
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "assets": {
+    "directory": "../web/dist",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  }
+}

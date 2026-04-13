@@ -1,0 +1,21 @@
+{
+  "name": "@osu-weather/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --port 8787",
+    "types": "wrangler types",
+    "check": "tsc --project tsconfig.json --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply WEATHER_DB --local",
+    "db:migrate:remote": "wrangler d1 migrations apply WEATHER_DB --remote",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@osu-weather/shared": "0.1.0",
+    "hono": "^4.12.12"
+  },
+  "devDependencies": {
+    "wrangler": "^4.43.0"
+  }
+}

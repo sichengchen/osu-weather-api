@@ -1,0 +1,39 @@
+{
+  "name": "osu-weather-api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c cyan,magenta \"vp run @osu-weather/api#dev\" \"vp run @osu-weather/web#dev\"",
+    "dev:api": "vp run @osu-weather/api#dev",
+    "dev:web": "vp run @osu-weather/web#dev",
+    "build": "vp run -r build",
+    "preview": "vp run @osu-weather/web#preview",
+    "types": "vp run @osu-weather/api#types",
+    "history:sql": "node ./apps/api/scripts/export-history-import-sql.mjs",
+    "lint": "oxlint . --config .oxlintrc.json",
+    "lint:fix": "oxlint . --config .oxlintrc.json --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check": "vp run @osu-weather/api#types && vp run @osu-weather/api#check && vp run @osu-weather/web#check && npm run lint && npm run test",
+    "deploy": "vp run @osu-weather/web#build && vp run @osu-weather/api#deploy",
+    "config": "vp config",
+    "staged": "vp staged"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^25.0.0",
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3",
+    "vite-plus": "^0.1.16",
+    "vitest": "^4.1.4",
+    "oxlint": "^1.60.0"
+  },
+  "packageManager": "npm@11.12.1"
+}

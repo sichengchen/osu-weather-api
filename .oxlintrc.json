@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "jsx-a11y", "import", "vitest"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "rules": {
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off"
+  },
+  "ignorePatterns": [
+    "node_modules/**",
+    "apps/web/dist/**",
+    "apps/api/worker-configuration.d.ts"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "apps/api/**/*.{ts,tsx}",
+        "apps/web/**/*.{ts,tsx}",
+        "packages/shared/**/*.ts",
+        "vite.config.ts",
+        "vitest.config.ts"
+      ],
+      "env": {
+        "es6": true
+      }
+    },
+    {
+      "files": [
+        "apps/api/**/*.{ts,tsx}",
+        "vitest.config.ts"
+      ],
+      "env": {
+        "node": true
+      }
+    },
+    {
+      "files": [
+        "apps/web/**/*.{ts,tsx}"
+      ],
+      "env": {
+        "browser": true
+      }
+    },
+    {
+      "files": [
+        "**/*.test.ts",
+        "**/*.test.tsx"
+      ],
+      "globals": {
+        "describe": "readonly",
+        "it": "readonly",
+        "expect": "readonly",
+        "vi": "readonly",
+        "beforeEach": "readonly",
+        "afterEach": "readonly"
+      }
+    }
+  ]
+}
