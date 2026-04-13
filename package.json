@@ -30,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^25.0.0",
     "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0",
     "typescript": "^5.9.3",
     "vite-plus": "^0.1.16",
     "vitest": "^4.1.4",
