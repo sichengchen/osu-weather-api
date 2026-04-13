@@ -51,6 +51,8 @@ Start the API and frontend together:
 npm run dev
 ```
 
+The API dev server automatically applies local D1 migrations before Wrangler starts, so the history endpoints have the local `weather_history` schema available on first boot.
+
 Local URLs:
 
 - API: `http://127.0.0.1:8787`

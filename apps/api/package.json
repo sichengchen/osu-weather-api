@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run db:migrate:local",
     "dev": "wrangler dev --local --port 8787",
     "types": "wrangler types",
     "check": "tsc --project tsconfig.json --noEmit",

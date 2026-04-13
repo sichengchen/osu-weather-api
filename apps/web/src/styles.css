@@ -144,7 +144,10 @@ select {
 .detail-fact p,
 .explorer-topline p,
 .detail-topline p,
-.chart-header p {
+.chart-header p,
+.mobile-home-header p,
+.mobile-settings-label,
+.mobile-detail-bar span {
   margin: 0;
   font-family: "IBM Plex Mono", monospace;
   font-size: 0.72rem;
@@ -251,6 +254,94 @@ select {
   display: block;
   margin-top: 6px;
   font-size: 0.98rem;
+}
+
+.mobile-home-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.mobile-home-shell > * {
+  min-width: 0;
+}
+
+.mobile-home-header {
+  display: grid;
+  gap: 10px;
+  padding: 4px 2px 0;
+  min-width: 0;
+}
+
+.mobile-home-header h1 {
+  margin: 0;
+  font-size: clamp(1.65rem, 7.5vw, 2.15rem);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+}
+
+.mobile-home-header span,
+.mobile-detail-bar span {
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.mobile-settings-shell {
+  display: grid;
+  gap: 14px;
+  padding: 22px 20px 20px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  backdrop-filter: blur(16px);
+  min-width: 0;
+}
+
+.mobile-settings-label {
+  min-width: 0;
+}
+
+.toggle-stack--mobile {
+  width: 100%;
+  height: auto;
+  gap: 10px;
+}
+
+.toggle-stack--mobile .toggle-row {
+  height: auto;
+  min-height: 46px;
+  padding: 3px;
+}
+
+.toggle-stack--mobile .toggle-button {
+  min-height: 40px;
+  padding: 10px 12px;
+}
+
+.detail-shell--mobile .detail-topline {
+  gap: 18px;
+}
+
+.mobile-detail-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.mobile-nav-button {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease;
+}
+
+.mobile-nav-button:hover,
+.mobile-nav-button:focus-visible {
+  background: var(--surface-hover);
+  outline: none;
 }
 
 .detail-topline span,
@@ -759,6 +850,10 @@ select {
   color: var(--muted);
 }
 
+.loading-shell--standalone {
+  padding: 0 2px;
+}
+
 .footer-shell {
   display: flex;
   align-items: center;
@@ -995,13 +1090,13 @@ select {
     overflow: visible;
   }
 
-  .detail-shell {
+  .workspace-grid > .detail-shell {
     order: 1;
     height: auto;
     overflow: visible;
   }
 
-  .explorer-shell {
+  .workspace-grid > .explorer-shell {
     order: 2;
     height: auto;
     overflow: visible;
@@ -1059,6 +1154,12 @@ select {
   .ohio-map-shell {
     width: 112px;
   }
+
+  .detail-shell,
+  .explorer-shell {
+    height: auto;
+    overflow: visible;
+  }
 }
 
 @media (max-width: 760px) {
@@ -1073,6 +1174,22 @@ select {
 
   .topbar-meta {
     grid-template-columns: 1fr;
+  }
+
+  .mobile-home-shell {
+    gap: 18px;
+  }
+
+  .mobile-home-header {
+    padding: 8px 2px 0;
+  }
+
+  .mobile-home-header h1 {
+    font-size: clamp(1.8rem, 9vw, 2.3rem);
+  }
+
+  .mobile-settings-shell {
+    padding: 20px 18px 18px;
   }
 
   .detail-ribbon {
@@ -1091,14 +1208,20 @@ select {
   .history-range-control input,
   .history-range-action,
   .history-range-buttons,
-  .history-range-apply,
-  .history-range-shortcut {
+  .history-range-apply {
     min-width: 0;
     width: 100%;
   }
 
   .history-range-buttons {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .history-range-shortcut {
+    min-width: 0;
+    width: auto;
   }
 
   .detail-fact-grid {
@@ -1123,6 +1246,26 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .explorer-row-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 12px;
+    align-items: start;
+  }
+
+  .explorer-row-main > :last-child {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .explorer-row-id {
+    min-width: auto;
+    grid-column: 2;
+    justify-self: end;
+    text-align: right;
+  }
+
   .explorer-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1137,6 +1280,11 @@ select {
     align-items: start;
   }
 
+  .mobile-detail-bar {
+    flex-direction: column;
+    align-items: start;
+  }
+
   .search-shell input {
     width: 100%;
   }
@@ -1147,17 +1295,19 @@ select {
 
   .footer-shell {
     gap: 10px;
-    white-space: normal;
+    white-space: nowrap;
     overflow: visible;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    align-items: center;
   }
 
   .footer-main {
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .footer-link--button {
-    margin-left: 0;
+    margin-left: auto;
   }
 
   .credit-sheet-backdrop {

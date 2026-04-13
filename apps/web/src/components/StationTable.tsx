@@ -9,6 +9,8 @@ type StationTableProps = {
   selectedStationId: string | null;
   search: string;
   unitSystem: UnitSystem;
+  showVisibleCount?: boolean;
+  highlightSelection?: boolean;
   onSearchChange: (value: string) => void;
   onSelect: (stationId: string) => void;
 };
@@ -18,6 +20,8 @@ export function StationTable({
   selectedStationId,
   search,
   unitSystem,
+  showVisibleCount = true,
+  highlightSelection = true,
   onSearchChange,
   onSelect
 }: StationTableProps) {
@@ -46,7 +50,7 @@ export function StationTable({
       <div className="explorer-topline">
         <div>
           <p>Stations</p>
-          <span>{filteredStations.length} visible stations</span>
+          {showVisibleCount ? <span>{filteredStations.length} visible stations</span> : null}
         </div>
         <label className="search-shell">
           <span className="sr-only">Search stations</span>
@@ -60,7 +64,7 @@ export function StationTable({
 
       <div className="explorer-list" role="list">
         {filteredStations.map((station) => {
-          const active = station.stationId === selectedStationId;
+          const active = highlightSelection && station.stationId === selectedStationId;
 
           return (
             <button
