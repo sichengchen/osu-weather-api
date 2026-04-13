@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "predev": "npm run db:migrate:local",
-    "dev": "wrangler dev --local --port 8787",
-    "types": "wrangler types",
+    "dev": "wrangler dev --config ../../wrangler.jsonc --local --port 8787",
+    "types": "wrangler types ./worker-configuration.d.ts --config ../../wrangler.jsonc",
     "check": "tsc --project tsconfig.json --noEmit",
-    "db:migrate:local": "wrangler d1 migrations apply WEATHER_DB --local",
-    "db:migrate:remote": "wrangler d1 migrations apply WEATHER_DB --remote",
-    "deploy": "wrangler deploy"
+    "db:migrate:local": "wrangler d1 migrations apply WEATHER_DB --config ../../wrangler.jsonc --local",
+    "db:migrate:remote": "wrangler d1 migrations apply WEATHER_DB --config ../../wrangler.jsonc --remote",
+    "deploy": "wrangler deploy --config ../../wrangler.jsonc"
   },
   "dependencies": {
     "@osu-weather/shared": "0.1.0",

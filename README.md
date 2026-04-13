@@ -20,6 +20,7 @@ Demo API base URL: `https://osu-weather.scchan.moe`
 
 ## Overview
 
+- `wrangler.jsonc`: repo-root Cloudflare Worker config used for deployment
 - `apps/api`: Hono-based Cloudflare Worker API
 - `apps/web`: React + Tailwind dashboard built with Vite
 - `packages/shared`: shared TypeScript models used by the API and frontend
@@ -75,8 +76,9 @@ npm run deploy
 ## Repository Layout
 
 ```text
+wrangler.jsonc
 apps/
-  api/      Cloudflare Worker source and Wrangler config
+  api/      Cloudflare Worker source
   web/      React frontend
 packages/
   shared/   Shared API and UI types
@@ -84,7 +86,7 @@ packages/
 
 ## Configuration
 
-`apps/api/wrangler.jsonc` defines the Worker bindings and defaults:
+`wrangler.jsonc` defines the Worker bindings and defaults:
 
 - `WEATHER_DB`: D1 database for historical observations
 - `HISTORY_CAPTURE_INTERVAL_SECONDS`: minimum seconds between captures
@@ -95,7 +97,7 @@ The default capture interval is `600` seconds.
 ## Cloudflare Deployment
 
 1. Create a D1 database for `WEATHER_DB`.
-2. Replace the placeholder `database_id` and `preview_database_id` values in [apps/api/wrangler.jsonc](/Users/sichengchen/src/osu-bpcrc-weather-api/apps/api/wrangler.jsonc).
+2. Replace the placeholder `database_id` and `preview_database_id` values in [wrangler.jsonc](/Users/sichengchen/src/osu-bpcrc-weather-api/wrangler.jsonc).
 3. Apply migrations:
 
 ```bash
@@ -111,13 +113,14 @@ npm run history:sql -- ~/Downloads/all-locations_2026-01-01-2026-12-31_2026.csv 
 5. Import the SQL file into D1:
 
 ```bash
-npx wrangler d1 execute WEATHER_DB --remote --config apps/api/wrangler.jsonc --file /tmp/weather-history-import.sql
+npx wrangler d1 execute WEATHER_DB --remote --config wrangler.jsonc --file /tmp/weather-history-import.sql
 ```
 
 6. Build and deploy:
 
 ```bash
-npm run deploy
+npm run build
+npx wrangler deploy
 ```
 
 The bundled importer skips malformed rows, which is useful for CSV exports that end with an upstream HTML error page instead of clean CSV.
