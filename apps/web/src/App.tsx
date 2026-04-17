@@ -78,8 +78,10 @@ export default function App() {
   const [isSourceSheetOpen, setIsSourceSheetOpen] = useState(false);
   const [isMobileLayout, setIsMobileLayout] = useState(getInitialMobileLayout);
   const [mobileLayer, setMobileLayer] = useState<MobileLayer>("home");
+  const [hasLoadedCurrentOnce, setHasLoadedCurrentOnce] = useState(false);
   const [historyRangeError, setHistoryRangeError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const selectedStationAvailable = current?.stations.some((station) => station.stationId === selectedStationId) ?? false;
 
   useEffect(() => {
     void loadCurrent();
@@ -124,6 +126,7 @@ export default function App() {
 
     const preferredStation = current.stations.find((station) => station.stationId === "BYRD") ?? current.stations[0] ?? null;
     setSelectedStationId(preferredStation?.stationId ?? null);
+    setHistory(null);
   }, [current, selectedStationId]);
 
   useEffect(() => {
@@ -136,15 +139,29 @@ export default function App() {
   }, [themeMode]);
 
   useEffect(() => {
-    if (!selectedStationId) {
+    if (!hasLoadedCurrentOnce) {
       return;
     }
 
-    void loadHistory(selectedStationId, {
-      from: historyRange.from,
-      to: historyRange.to
-    });
-  }, [historyRange.from, historyRange.to, selectedStationId]);
+    if (!selectedStationId || !selectedStationAvailable) {
+      setHistory(null);
+      setLoadingHistory(false);
+      return;
+    }
+
+    const abortController = new AbortController();
+
+    void loadHistory(
+      selectedStationId,
+      {
+        from: historyRange.from,
+        to: historyRange.to
+      },
+      abortController.signal
+    );
+
+    return () => abortController.abort();
+  }, [hasLoadedCurrentOnce, historyRange.from, historyRange.to, selectedStationAvailable, selectedStationId]);
 
   useEffect(() => {
     if (!isSourceSheetOpen) {
@@ -185,6 +202,7 @@ export default function App() {
     try {
       const data = await fetchJson<CurrentWeatherResponse>("/api/current");
       setCurrent(data);
+      setHasLoadedCurrentOnce(true);
       setError(null);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load current weather.");
@@ -193,7 +211,7 @@ export default function App() {
     }
   }
 
-  async function loadHistory(stationId: string, range: HistoryRange) {
+  async function loadHistory(stationId: string, range: HistoryRange, signal?: AbortSignal) {
     setLoadingHistory(true);
 
     try {
@@ -201,17 +219,37 @@ export default function App() {
         from: range.from,
         to: range.to
       });
-      const data = await fetchJson<StationHistoryResponse>(`/api/stations/${stationId}/history?${historyParams.toString()}`);
+      const data = await fetchJson<StationHistoryResponse>(`/api/stations/${stationId}/history?${historyParams.toString()}`, {
+        signal
+      });
+
+      if (signal?.aborted) {
+        return;
+      }
+
       setHistory(data);
       setError(null);
     } catch (caughtError) {
+      if (caughtError instanceof DOMException && caughtError.name === "AbortError") {
+        return;
+      }
+
       setError(caughtError instanceof Error ? caughtError.message : "Failed to load station history.");
     } finally {
-      setLoadingHistory(false);
+      if (!signal?.aborted) {
+        setLoadingHistory(false);
+      }
     }
   }
 
   const selectedStation = current?.stations.find((station) => station.stationId === selectedStationId) ?? null;
+  const selectedHistory =
+    history &&
+    history.station?.stationId === selectedStationId &&
+    history.history.from === historyRange.from &&
+    history.history.to === historyRange.to
+      ? history
+      : null;
   const temperatureChart = getTemperatureChartConfig(unitSystem);
   const dewPointChart = getDewPointChartConfig(unitSystem);
   const pressureChart = getPressureChartConfig(unitSystem);
@@ -318,11 +356,13 @@ export default function App() {
           <div className="detail-heading-wrap">
             <OhioStationMap latitude={selectedStation?.latitude} longitude={selectedStation?.longitude} />
             <div className="detail-heading">
-              <h2>{getDisplayStationName(selectedStation)}</h2>
+              <h2>{selectedStation ? getDisplayStationName(selectedStation) : selectedStationId ?? "Loading station"}</h2>
               <span>
                 {selectedStation
                   ? `${selectedStation.stationId} · ${selectedStation.location} · ${selectedStation.county} County`
-                  : "Waiting for the first current payload"}
+                  : current
+                    ? "Waiting for the selected station to appear in the current feed."
+                    : "Loading latest statewide observations."}
               </span>
             </div>
           </div>
@@ -408,26 +448,26 @@ export default function App() {
 
           {loadingCurrent && !current ? <div className="loading-shell">Loading the current statewide feed.</div> : null}
 
-          {selectedStation && history ? (
+          {selectedStation && selectedHistory ? (
             <div className="chart-grid">
               <MetricChart
                 title="Air Temperature"
                 unit={temperatureChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={temperatureChart.accessor}
                 accent="#ba0c2f"
               />
               <MetricChart
                 title="Dew Point"
                 unit={dewPointChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={dewPointChart.accessor}
                 accent="#ba0c2f"
               />
               <MetricChart
                 title="Humidity"
                 unit="%"
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={(point) => point.humidityPercent}
                 accent="#ba0c2f"
                 precision={0}
@@ -435,28 +475,28 @@ export default function App() {
               <MetricChart
                 title="Wind Speed"
                 unit={windChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={windChart.accessor}
                 accent="#ba0c2f"
               />
               <MetricChart
                 title="Wind Gust"
                 unit={windGustChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={windGustChart.accessor}
                 accent="#ba0c2f"
               />
               <MetricChart
                 title="Solar Radiation"
                 unit={solarChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={solarChart.accessor}
                 accent="#ba0c2f"
               />
               <MetricChart
                 title="Pressure"
                 unit={pressureChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={pressureChart.accessor}
                 accent="#ba0c2f"
                 precision={unitSystem === "metric" ? 0 : 2}
@@ -464,21 +504,21 @@ export default function App() {
               <MetricChart
                 title="24 Hour Rain"
                 unit={rainChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={rainChart.accessor}
                 accent="#ba0c2f"
               />
               <MetricChart
                 title="Soil Temperature"
                 unit={soilChart.unit}
-                points={history.points}
+                points={selectedHistory.points}
                 accessor={soilChart.accessor}
                 accent="#ba0c2f"
               />
             </div>
           ) : null}
 
-          {loadingHistory ? <div className="loading-shell">Refreshing history for {selectedStationId}.</div> : null}
+          {loadingHistory ? <div className="loading-shell">Loading recent history for {selectedStationId}.</div> : null}
         </div>
       </section>
     );
@@ -541,7 +581,7 @@ export default function App() {
               />
               <div className="topbar-stat">
                 <span>Selected</span>
-                <strong>{selectedStation ? selectedStation.stationId : "--"}</strong>
+                <strong>{selectedStationId ?? "--"}</strong>
               </div>
               <div className="topbar-stat">
                 <span>Temp</span>
@@ -718,8 +758,8 @@ function DetailFact({ label, value }: { label: string; value: string }) {
   );
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const response = await fetch(url);
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(url, init);
 
   if (!response.ok) {
     const fallback = await response.text();
