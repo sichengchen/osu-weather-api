@@ -1,8 +1,7 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 
 import type { CurrentWeatherResponse, StationHistoryResponse } from "@osu-weather/shared";
 
-import { MetricChart } from "./components/MetricChart";
 import { OhioStationMap } from "./components/OhioStationMap";
 import { StationTable } from "./components/StationTable";
 import { getDisplayStationName } from "./lib/stations";
@@ -49,6 +48,10 @@ const HISTORY_SHORTCUTS = [
   { hours: 72, label: "72hr" },
   { hours: 168, label: "7d" }
 ] as const;
+const LazyMetricChart = lazy(async () => {
+  const module = await import("./components/MetricChart");
+  return { default: module.MetricChart };
+});
 
 type HistoryRange = {
   from: string;
@@ -81,6 +84,7 @@ export default function App() {
   const [hasLoadedCurrentOnce, setHasLoadedCurrentOnce] = useState(false);
   const [historyRangeError, setHistoryRangeError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const hasQueuedInitialHistoryLoadRef = useRef(false);
   const selectedStationAvailable = current?.stations.some((station) => station.stationId === selectedStationId) ?? false;
 
   useEffect(() => {
@@ -149,19 +153,46 @@ export default function App() {
       return;
     }
 
-    const abortController = new AbortController();
+    if (isMobileLayout && mobileLayer !== "detail") {
+      setLoadingHistory(false);
+      return;
+    }
 
-    void loadHistory(
-      selectedStationId,
-      {
-        from: historyRange.from,
-        to: historyRange.to
-      },
-      abortController.signal
-    );
+    const abortController = new AbortController();
+    const runLoadHistory = () => {
+      hasQueuedInitialHistoryLoadRef.current = true;
+      void import("./components/MetricChart");
+      void loadHistory(
+        selectedStationId,
+        {
+          from: historyRange.from,
+          to: historyRange.to
+        },
+        abortController.signal
+      );
+    };
+
+    if (!hasQueuedInitialHistoryLoadRef.current) {
+      const cancelIdleWork = scheduleWhenBrowserIdle(runLoadHistory);
+
+      return () => {
+        cancelIdleWork();
+        abortController.abort();
+      };
+    }
+
+    runLoadHistory();
 
     return () => abortController.abort();
-  }, [hasLoadedCurrentOnce, historyRange.from, historyRange.to, selectedStationAvailable, selectedStationId]);
+  }, [
+    hasLoadedCurrentOnce,
+    historyRange.from,
+    historyRange.to,
+    isMobileLayout,
+    mobileLayer,
+    selectedStationAvailable,
+    selectedStationId
+  ]);
 
   useEffect(() => {
     if (!isSourceSheetOpen) {
@@ -449,73 +480,75 @@ export default function App() {
           {loadingCurrent && !current ? <div className="loading-shell">Loading the current statewide feed.</div> : null}
 
           {selectedStation && selectedHistory ? (
-            <div className="chart-grid">
-              <MetricChart
-                title="Air Temperature"
-                unit={temperatureChart.unit}
-                points={selectedHistory.points}
-                accessor={temperatureChart.accessor}
-                accent="#ba0c2f"
-              />
-              <MetricChart
-                title="Dew Point"
-                unit={dewPointChart.unit}
-                points={selectedHistory.points}
-                accessor={dewPointChart.accessor}
-                accent="#ba0c2f"
-              />
-              <MetricChart
-                title="Humidity"
-                unit="%"
-                points={selectedHistory.points}
-                accessor={(point) => point.humidityPercent}
-                accent="#ba0c2f"
-                precision={0}
-              />
-              <MetricChart
-                title="Wind Speed"
-                unit={windChart.unit}
-                points={selectedHistory.points}
-                accessor={windChart.accessor}
-                accent="#ba0c2f"
-              />
-              <MetricChart
-                title="Wind Gust"
-                unit={windGustChart.unit}
-                points={selectedHistory.points}
-                accessor={windGustChart.accessor}
-                accent="#ba0c2f"
-              />
-              <MetricChart
-                title="Solar Radiation"
-                unit={solarChart.unit}
-                points={selectedHistory.points}
-                accessor={solarChart.accessor}
-                accent="#ba0c2f"
-              />
-              <MetricChart
-                title="Pressure"
-                unit={pressureChart.unit}
-                points={selectedHistory.points}
-                accessor={pressureChart.accessor}
-                accent="#ba0c2f"
-                precision={unitSystem === "metric" ? 0 : 2}
-              />
-              <MetricChart
-                title="24 Hour Rain"
-                unit={rainChart.unit}
-                points={selectedHistory.points}
-                accessor={rainChart.accessor}
-                accent="#ba0c2f"
-              />
-              <MetricChart
-                title="Soil Temperature"
-                unit={soilChart.unit}
-                points={selectedHistory.points}
-                accessor={soilChart.accessor}
-                accent="#ba0c2f"
-              />
-            </div>
+            <Suspense fallback={<div className="loading-shell">Loading chart visuals for {selectedStation.stationId}.</div>}>
+              <div className="chart-grid">
+                <LazyMetricChart
+                  title="Air Temperature"
+                  unit={temperatureChart.unit}
+                  points={selectedHistory.points}
+                  accessor={temperatureChart.accessor}
+                  accent="#ba0c2f"
+                />
+                <LazyMetricChart
+                  title="Dew Point"
+                  unit={dewPointChart.unit}
+                  points={selectedHistory.points}
+                  accessor={dewPointChart.accessor}
+                  accent="#ba0c2f"
+                />
+                <LazyMetricChart
+                  title="Humidity"
+                  unit="%"
+                  points={selectedHistory.points}
+                  accessor={(point) => point.humidityPercent}
+                  accent="#ba0c2f"
+                  precision={0}
+                />
+                <LazyMetricChart
+                  title="Wind Speed"
+                  unit={windChart.unit}
+                  points={selectedHistory.points}
+                  accessor={windChart.accessor}
+                  accent="#ba0c2f"
+                />
+                <LazyMetricChart
+                  title="Wind Gust"
+                  unit={windGustChart.unit}
+                  points={selectedHistory.points}
+                  accessor={windGustChart.accessor}
+                  accent="#ba0c2f"
+                />
+                <LazyMetricChart
+                  title="Solar Radiation"
+                  unit={solarChart.unit}
+                  points={selectedHistory.points}
+                  accessor={solarChart.accessor}
+                  accent="#ba0c2f"
+                />
+                <LazyMetricChart
+                  title="Pressure"
+                  unit={pressureChart.unit}
+                  points={selectedHistory.points}
+                  accessor={pressureChart.accessor}
+                  accent="#ba0c2f"
+                  precision={unitSystem === "metric" ? 0 : 2}
+                />
+                <LazyMetricChart
+                  title="24 Hour Rain"
+                  unit={rainChart.unit}
+                  points={selectedHistory.points}
+                  accessor={rainChart.accessor}
+                  accent="#ba0c2f"
+                />
+                <LazyMetricChart
+                  title="Soil Temperature"
+                  unit={soilChart.unit}
+                  points={selectedHistory.points}
+                  accessor={soilChart.accessor}
+                  accent="#ba0c2f"
+                />
+              </div>
+            </Suspense>
           ) : null}
 
           {loadingHistory ? <div className="loading-shell">Loading recent history for {selectedStationId}.</div> : null}
@@ -826,4 +859,19 @@ function scrollToTop() {
   }
 
   window.scrollTo({ top: 0 });
+}
+
+function scheduleWhenBrowserIdle(callback: () => void) {
+  if (typeof window === "undefined") {
+    callback();
+    return () => undefined;
+  }
+
+  if (typeof window.requestIdleCallback === "function") {
+    const idleId = window.requestIdleCallback(callback, { timeout: 400 });
+    return () => window.cancelIdleCallback(idleId);
+  }
+
+  const timeoutId = window.setTimeout(callback, 180);
+  return () => window.clearTimeout(timeoutId);
 }

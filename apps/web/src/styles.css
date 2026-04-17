@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 @import "tailwindcss";
 
 :root,
@@ -448,6 +447,8 @@ select {
   color: inherit;
   text-align: left;
   transition: background-color 180ms ease, border-color 180ms ease;
+  content-visibility: auto;
+  contain-intrinsic-size: 98px;
 }
 
 .explorer-row:hover {
@@ -750,6 +751,8 @@ select {
   height: 120px;
   min-height: 120px;
   gap: 4px;
+  content-visibility: auto;
+  contain-intrinsic-size: 120px;
 }
 
 .chart-header {
