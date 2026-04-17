@@ -1,6 +1,6 @@
-import type { HistoryPoint, StationCurrent, StationHistoryResponse } from "@osu-weather/shared";
+import type { HistoryPoint, StationCurrent, StationHistoryResponse, StationInfo } from "@osu-weather/shared";
 
-import { getCurrentStations, getStationCatalog } from "./ohmesonet";
+import { getCurrentStations } from "./ohmesonet";
 
 const LIVE_CAPTURE_SOURCE = "live_capture";
 
@@ -138,10 +138,13 @@ export async function maybeCaptureHistory(env: Env, stations?: StationCurrent[])
   };
 }
 
-export async function getStationHistory(env: Env, stationId: string, range: HistoryRange): Promise<StationHistoryResponse> {
+export async function getStationHistory(
+  env: Env,
+  stationId: string,
+  range: HistoryRange,
+  station: StationInfo
+): Promise<StationHistoryResponse> {
   const normalizedStationId = stationId.toUpperCase();
-  const catalog = await getStationCatalog();
-  const station = catalog.find((entry) => entry.stationId === normalizedStationId) ?? null;
   const intervalSeconds = getHistoryCaptureIntervalSeconds(env);
   const now = new Date();
   const result = await env.WEATHER_DB.prepare(
@@ -189,14 +192,6 @@ export async function getStationHistory(env: Env, stationId: string, range: Hist
     },
     points
   };
-}
-
-export async function ensureInitialCapture(env: Env): Promise<void> {
-  const lastCaptureAt = await getLastHistoryCaptureAt(env);
-
-  if (!lastCaptureAt) {
-    await maybeCaptureHistory(env);
-  }
 }
 
 export async function getLastHistoryCaptureAt(env: Env): Promise<string | null> {

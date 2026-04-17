@@ -1,13 +1,19 @@
 import type { Context } from "hono";
 import { Hono } from "hono";
 
-import { buildCurrentWeatherResponse, getCurrentStations, getStationCatalog } from "./ohmesonet";
 import {
-  ensureInitialCapture,
+  getCurrentWeatherSnapshot,
+  getStationCatalogFromSnapshot,
+  getStationCurrentFromSnapshot,
+  getStationInfoFromSnapshot,
+  refreshCurrentWeatherSnapshot
+} from "./current-snapshot";
+import { getCurrentStations } from "./ohmesonet";
+import {
   getHistoryCaptureIntervalSeconds,
-  getLastHistoryCaptureAt,
   type HistoryRange,
   getStationHistory,
+  getLastHistoryCaptureAt,
   maybeCaptureHistory
 } from "./history";
 
@@ -21,40 +27,46 @@ app.get("/api/health", (c) => {
 });
 
 app.get("/api/stations", async (c) => {
-  const stations = await getStationCatalog();
+  const snapshot = await getCurrentWeatherSnapshot(c.env);
+
+  if (!snapshot) {
+    return currentSnapshotUnavailable(c);
+  }
 
   return c.json({
-    fetchedAt: new Date().toISOString(),
-    count: stations.length,
-    stations
+    fetchedAt: snapshot.fetchedAt,
+    count: snapshot.stations.length,
+    stations: getStationCatalogFromSnapshot(snapshot)
   });
 });
 
 app.get("/api/current", async (c) => {
-  const stations = await getCurrentStations();
-  const lastCaptureAt = await getLastHistoryCaptureAt(c.env);
-  c.executionCtx.waitUntil(maybeCaptureHistory(c.env, stations));
+  const snapshot = await getCurrentWeatherSnapshot(c.env);
 
-  return c.json(await buildCurrentWeatherResponse(lastCaptureAt, getHistoryCaptureIntervalSeconds(c.env)));
+  if (!snapshot) {
+    return currentSnapshotUnavailable(c);
+  }
+
+  return c.json(snapshot);
 });
 
 app.get("/api/stations/:stationId/current", async (c) => {
   const stationId = c.req.param("stationId").toUpperCase();
-  const stations = await getCurrentStations();
-  const station = stations.find((entry) => entry.stationId === stationId);
+  const snapshot = await getCurrentWeatherSnapshot(c.env);
+
+  if (!snapshot) {
+    return currentSnapshotUnavailable(c);
+  }
+
+  const station = getStationCurrentFromSnapshot(snapshot, stationId);
 
   if (!station) {
     return notFound(c, `Unknown station: ${stationId}`);
   }
 
-  c.executionCtx.waitUntil(maybeCaptureHistory(c.env, stations));
-
   return c.json({
-    fetchedAt: new Date().toISOString(),
-    history: {
-      captureIntervalSeconds: getHistoryCaptureIntervalSeconds(c.env),
-      lastCaptureAt: await getLastHistoryCaptureAt(c.env)
-    },
+    fetchedAt: snapshot.fetchedAt,
+    history: snapshot.history,
     station
   });
 });
@@ -83,8 +95,19 @@ app.get("/api/history", async (c) => {
     );
   }
 
-  await ensureInitialCapture(c.env);
-  return c.json(await getStationHistory(c.env, stationId, range.value));
+  const snapshot = await getCurrentWeatherSnapshot(c.env);
+
+  if (!snapshot) {
+    return currentSnapshotUnavailable(c);
+  }
+
+  const station = getStationInfoFromSnapshot(snapshot, stationId);
+
+  if (!station) {
+    return notFound(c, `Unknown station: ${stationId}`);
+  }
+
+  return c.json(await getStationHistory(c.env, stationId, range.value, station));
 });
 
 app.get("/api/stations/:stationId/history", async (c) => {
@@ -101,13 +124,19 @@ app.get("/api/stations/:stationId/history", async (c) => {
     );
   }
 
-  await ensureInitialCapture(c.env);
-  const history = await getStationHistory(c.env, stationId, range.value);
+  const snapshot = await getCurrentWeatherSnapshot(c.env);
 
-  if (!history.station) {
+  if (!snapshot) {
+    return currentSnapshotUnavailable(c);
+  }
+
+  const station = getStationInfoFromSnapshot(snapshot, stationId);
+
+  if (!station) {
     return notFound(c, `Unknown station: ${stationId}`);
   }
 
+  const history = await getStationHistory(c.env, stationId, range.value, station);
   return c.json(history);
 });
 
@@ -201,7 +230,28 @@ function notFound(c: Context, message: string) {
 
 export default {
   fetch: app.fetch,
-  scheduled: async (_event: ScheduledEvent, env: Env) => {
-    await maybeCaptureHistory(env);
+  scheduled: async (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
+    ctx.waitUntil(refreshCurrentSnapshotAndHistory(env));
   }
 };
+
+async function refreshCurrentSnapshotAndHistory(env: Env): Promise<void> {
+  const stations = await getCurrentStations();
+  const captureResult = await maybeCaptureHistory(env, stations);
+
+  await refreshCurrentWeatherSnapshot(env, {
+    stations,
+    captureIntervalSeconds: getHistoryCaptureIntervalSeconds(env),
+    lastCaptureAt: captureResult.capturedAt ?? (await getLastHistoryCaptureAt(env))
+  });
+}
+
+function currentSnapshotUnavailable(c: Context) {
+  return c.json(
+    {
+      error: "current_snapshot_unavailable",
+      message: "Current weather snapshot unavailable. Wait for the scheduled refresh to populate D1."
+    },
+    503
+  );
+}

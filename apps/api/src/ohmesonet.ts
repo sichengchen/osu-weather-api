@@ -132,9 +132,11 @@ export async function getCurrentStations(): Promise<StationCurrent[]> {
   return currentPromise;
 }
 
-export async function buildCurrentWeatherResponse(lastCaptureAt: string | null, captureIntervalSeconds: number): Promise<CurrentWeatherResponse> {
-  const stations = await getCurrentStations();
-
+export function buildCurrentWeatherResponse(
+  stations: StationCurrent[],
+  lastCaptureAt: string | null,
+  captureIntervalSeconds: number
+): CurrentWeatherResponse {
   return {
     fetchedAt: new Date().toISOString(),
     history: {

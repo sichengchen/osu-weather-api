@@ -57,7 +57,7 @@ Example response shape:
 
 ### `GET /api/current`
 
-Returns the current statewide response used by the dashboard, including:
+Returns the latest current statewide snapshot written by the scheduled refresh job, including:
 
 - fetch metadata
 - history capture metadata
@@ -221,12 +221,13 @@ Possible statuses:
 
 - `400` for invalid or missing query parameters
 - `404` for unknown stations
+- `503` when the scheduled current snapshot has not been populated yet
 - `500` for internal or upstream failures
 
 ## Notes
 
 - `BYRD` blends the dedicated BYRD current feed with statewide fallback data when some fields are missing upstream.
 - History is stored in D1.
-- Live captures are written on a schedule and on current-data reads when the capture interval has elapsed.
+- Current snapshots and live history captures are written by the scheduled refresh job.
 - Imported CSV backfills can coexist with live captures in the same history table.
 - Soil metrics may be `null` for stations or windows where upstream data is unavailable.

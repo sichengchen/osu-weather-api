@@ -29,6 +29,7 @@ Demo API base URL: `https://osu-weather.scchan.moe`
 
 - Serves live statewide current conditions for Ohio Mesonet stations
 - Merges BYRD into the current conditions feed
+- Stores the latest current-response snapshot in D1 for request-time reads
 - Captures historical snapshots into D1 on a configurable interval
 - Exposes station catalog, current conditions, and per-station history endpoints
 - Ships a browser UI for exploring stations and recent trends
@@ -90,7 +91,7 @@ packages/
 
 - `WEATHER_DB`: D1 database for historical observations
 - `HISTORY_CAPTURE_INTERVAL_SECONDS`: minimum seconds between captures
-- `triggers.crons`: scheduled Worker trigger for background history capture
+- `triggers.crons`: scheduled Worker trigger for background current snapshot refresh and history capture
 
 The default capture interval is `600` seconds.
 
