@@ -2,7 +2,7 @@
 
 OSU Weather API provides live Ohio Mesonet station conditions, adds BYRD observations from the Byrd Polar and Climate Research Center feed, stores recent weather history in Cloudflare D1, and exposes both API endpoints and a web dashboard for exploring current conditions and trends.
 
-View [Dashboard](https://osu-weather.scchan.moe)
+~~View [Dashboard](https://osu-weather.scchan.moe)~~ (Demo site closed)
 
 ## API Routes
 
